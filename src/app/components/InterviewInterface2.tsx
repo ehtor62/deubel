@@ -7,193 +7,59 @@ export default function InterviewInterface2() {
   const [isLoading, setIsLoading] = useState(false);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
-  const [useInnerHTML, setUseInnerHTML] = useState(false);
-  const widgetRef = useRef<HTMLDivElement>(null);
   const scriptLoadedRef = useRef(false);
 
+  // Load script once globally
   useEffect(() => {
-    console.log('🔧 Starting ElevenLabs widget initialization...');
+    console.log('🔧 Loading ElevenLabs script globally...');
     
-    // Reset states
-    setWidgetError(null);
-    setWidgetLoaded(false);
-    
-    let widgetInstance: HTMLElement | null = null;
-    let isDestroyed = false;
-    
-    function tryInnerHTMLFallback() {
-      console.log('🔄 Trying innerHTML fallback method...');
-      if (!widgetRef.current || isDestroyed) return;
-      
-      try {
-        widgetRef.current.innerHTML = `
-          <elevenlabs-convai agent-id="agent_6601k6t8307weyxbahv9p0qnyfr0" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>
-        `;
-        setWidgetLoaded(true);
-        console.log('✅ Fallback method applied');
-      } catch (error) {
-        console.error('❌ Fallback method failed:', error);
-        setWidgetError('All widget loading methods failed');
-      }
+    const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed"]');
+    if (existingScript) {
+      scriptLoadedRef.current = true;
+      console.log('� Script already exists');
+      return;
     }
     
-    function createWidget() {
-      if (isDestroyed) {
-        console.log('🛑 Component destroyed, canceling widget creation');
-        return;
-      }
-      
-      try {
-        console.log('🎤 Creating ElevenLabs widget...');
-        console.log('📍 Widget ref current:', widgetRef.current);
-        
-        if (!widgetRef.current) {
-          console.error('❌ Widget container ref is null');
-          setWidgetError('Container not available');
-          return;
-        }
-        
-        // Check if the custom element is defined
-        if (!customElements.get('elevenlabs-convai')) {
-          console.log('⏳ Custom element not yet defined, waiting...');
-          setTimeout(createWidget, 500);
-          return;
-        }
-        
-        // Clear existing content carefully
-        if (widgetRef.current.firstChild) {
-          try {
-            widgetRef.current.innerHTML = '';
-          } catch {
-            console.log('⚠️ Error clearing container, continuing...');
-          }
-        }
-        
-        // Create the custom element
-        const widget = document.createElement('elevenlabs-convai');
-        widget.setAttribute('agent-id', 'agent_6601k6t8307weyxbahv9p0qnyfr0');
-        
-        // Style the widget
-        widget.style.cssText = `
-          width: 100%;
-          height: 100%;
-          display: block;
-          min-height: 350px;
-          border: none;
-          border-radius: 8px;
-        `;
-        
-        // Update container styling
-        if (widgetRef.current) {
-          widgetRef.current.style.cssText = 'background: transparent; border: none;';
-          widgetRef.current.className = 'w-full h-full min-h-[350px]';
-        }
-        
-        console.log('🎯 Widget element created:', widget);
-        
-        // Store reference before adding to DOM
-        widgetInstance = widget;
-        
-        // Use requestAnimationFrame to ensure DOM is ready
-        requestAnimationFrame(() => {
-          if (isDestroyed || !widgetRef.current) return;
-          
-          try {
-            widgetRef.current.appendChild(widget);
-            console.log('✅ Widget added to container');
-            
-            if (!isDestroyed) {
-              setWidgetLoaded(true);
-            }
-            
-            // Verify widget persistence
-            setTimeout(() => {
-              if (isDestroyed) return;
-              
-              const addedWidget = widgetRef.current?.querySelector('elevenlabs-convai');
-              console.log('🔍 Widget verification:', addedWidget);
-              
-              if (addedWidget && !isDestroyed) {
-                console.log('✅ Widget successfully mounted and visible');
-              } else if (!isDestroyed) {
-                console.error('❌ Widget not found after creation, trying innerHTML fallback');
-                setUseInnerHTML(true);
-                tryInnerHTMLFallback();
-              }
-            }, 2000);
-            
-          } catch (error) {
-            console.error('❌ Error appending widget:', error);
-            if (!isDestroyed) {
-              setWidgetError('Failed to mount widget');
-            }
-          }
-        });
-        
-      } catch (error) {
-        console.error('❌ Error creating widget:', error);
-        if (!isDestroyed) {
-          setWidgetError(error instanceof Error ? error.message : 'Unknown error');
-        }
-      }
-    }
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+    script.async = true;
+    script.type = 'text/javascript';
     
-    // Load script and create widget
-    const initializeWidget = () => {
-      // Check if script already exists
-      const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed"]');
+    script.onload = () => {
+      console.log('✅ ElevenLabs ConvAI script loaded successfully');
+      scriptLoadedRef.current = true;
+    };
+    
+    script.onerror = (error) => {
+      console.error('❌ Failed to load ElevenLabs ConvAI script:', error);
+      setWidgetError('Failed to load ElevenLabs script');
+    };
+    
+    document.head.appendChild(script);
+    console.log('📦 ElevenLabs script added to document head');
+  }, []);
+
+  // Initialize widget with dangerouslySetInnerHTML approach
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      console.log('🎤 Checking for widget readiness...');
       
-      if (existingScript && scriptLoadedRef.current) {
-        console.log('📝 Script already loaded, creating widget...');
-        setTimeout(createWidget, 200);
-        return;
-      }
-      
-      if (existingScript) {
-        console.log('📝 Script exists, waiting for confirmation...');
-        existingScript.addEventListener('load', () => {
-          scriptLoadedRef.current = true;
-          setTimeout(createWidget, 500);
-        });
-        return;
-      }
-      
-      // Create new script
-      const script = document.createElement('script');
-      script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
-      script.async = true;
-      script.type = 'text/javascript';
-      
-      script.onload = () => {
-        console.log('✅ ElevenLabs ConvAI script loaded successfully');
-        scriptLoadedRef.current = true;
-        setTimeout(createWidget, 1000);
-      };
-      
-      script.onerror = (error) => {
-        console.error('❌ Failed to load ElevenLabs ConvAI script:', error);
-        if (!isDestroyed) {
-          setWidgetError('Failed to load ElevenLabs script');
+      // Wait for custom element to be defined
+      const checkCustomElement = () => {
+        if (customElements.get('elevenlabs-convai')) {
+          console.log('✅ Custom element is defined, setting up widget');
+          setWidgetLoaded(true);
+
+        } else {
+          console.log('⏳ Custom element not ready, checking again...');
+          setTimeout(checkCustomElement, 500);
         }
       };
       
-      document.head.appendChild(script);
-      console.log('📦 New ElevenLabs script added to document head');
-    };
+      checkCustomElement();
+    }, 2000);
     
-    initializeWidget();
-    
-    // Cleanup function
-    return () => {
-      console.log('🧹 Cleaning up widget...');
-      isDestroyed = true;
-      
-      // Don't remove the widget element, let it persist
-      // This prevents the removeChild error in production
-      if (widgetInstance && widgetInstance.parentNode) {
-        console.log('🎤 Preserving widget in DOM');
-      }
-    };
+    return () => clearTimeout(timer);
   }, []);
 
 
@@ -341,18 +207,18 @@ export default function InterviewInterface2() {
         <div className="mb-6 p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
           <h3 className="text-lg font-semibold text-blue-800 mb-3">🎤 AI Voice Interview</h3>
           <div className="min-h-[400px] bg-white border border-gray-300 rounded-lg overflow-hidden">
-            <div 
-              ref={widgetRef} 
-              className="w-full h-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600"
-            >
-              {!widgetLoaded && !widgetError && (
+            {!widgetLoaded && !widgetError && (
+              <div className="w-full h-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                   <p className="font-semibold">Loading AI Voice Interview Widget...</p>
                   <p className="text-sm text-gray-500 mt-1">Initializing ElevenLabs ConvAI</p>
                 </div>
-              )}
-              {widgetError && (
+              </div>
+            )}
+            
+            {widgetError && (
+              <div className="w-full h-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
                 <div className="text-center text-red-600">
                   <div className="text-4xl mb-2">⚠️</div>
                   <p className="font-semibold">Widget Load Error</p>
@@ -364,22 +230,17 @@ export default function InterviewInterface2() {
                     Reload Page
                   </button>
                 </div>
-              )}
-              {widgetLoaded && !useInnerHTML && !widgetRef.current?.querySelector('elevenlabs-convai') && (
-                <div className="text-center text-green-600">
-                  <div className="text-4xl mb-2">✅</div>
-                  <p className="font-semibold">Widget Loaded Successfully!</p>
-                  <p className="text-sm">If you do not see the interface, try refreshing the page</p>
-                </div>
-              )}
-              {useInnerHTML && (
-                <div 
-                  dangerouslySetInnerHTML={{
-                    __html: '<elevenlabs-convai agent-id="agent_6601k6t8307weyxbahv9p0qnyfr0" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>'
-                  }}
-                />
-              )}
-            </div>
+              </div>
+            )}
+            
+            {widgetLoaded && (
+              <div 
+                className="w-full h-full min-h-[350px]"
+                dangerouslySetInnerHTML={{
+                  __html: '<elevenlabs-convai agent-id="agent_6601k6t8307weyxbahv9p0qnyfr0" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>'
+                }}
+              />
+            )}
           </div>
         </div>
 

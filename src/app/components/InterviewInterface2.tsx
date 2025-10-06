@@ -1,10 +1,123 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 
 export default function InterviewInterface2() {
   const [name, setName] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [widgetLoaded, setWidgetLoaded] = useState(false);
+  const [widgetError, setWidgetError] = useState<string | null>(null);
+  const widgetRef = useRef<HTMLDivElement>(null);
+  const scriptLoadedRef = useRef(false);
+
+  useEffect(() => {
+    console.log('🔧 Starting ElevenLabs widget initialization...');
+    
+    // Reset states
+    setWidgetError(null);
+    setWidgetLoaded(false);
+    
+    function createWidget() {
+      try {
+        console.log('🎤 Creating ElevenLabs widget...');
+        console.log('📍 Widget ref current:', widgetRef.current);
+        
+        if (!widgetRef.current) {
+          console.error('❌ Widget container ref is null');
+          setWidgetError('Container not available');
+          return;
+        }
+        
+        // Clear any existing content
+        widgetRef.current.innerHTML = '';
+        
+        // Check if the custom element is defined
+        if (!customElements.get('elevenlabs-convai')) {
+          console.log('⏳ Custom element not yet defined, waiting...');
+          setTimeout(createWidget, 500);
+          return;
+        }
+        
+        // Create the custom element
+        const widget = document.createElement('elevenlabs-convai');
+        widget.setAttribute('agent-id', 'agent_6601k6t8307weyxbahv9p0qnyfr0');
+        
+        // Style the widget to fill the container naturally
+        widget.style.width = '100%';
+        widget.style.height = '100%';
+        widget.style.display = 'block';
+        widget.style.minHeight = '350px';
+        widget.style.border = 'none';
+        widget.style.borderRadius = '8px';
+        
+        // Remove placeholder styling from container
+        widgetRef.current.style.background = 'transparent';
+        widgetRef.current.style.border = 'none';
+        widgetRef.current.className = 'w-full h-full min-h-[350px]';
+        
+        console.log('🎯 Widget element created:', widget);
+        widgetRef.current.appendChild(widget);
+        console.log('✅ Widget added to container');
+        
+        setWidgetLoaded(true);
+        
+        // Verify widget was added
+        setTimeout(() => {
+          const addedWidget = widgetRef.current?.querySelector('elevenlabs-convai');
+          console.log('🔍 Widget verification:', addedWidget);
+          if (addedWidget) {
+            console.log('✅ Widget successfully mounted and visible');
+          } else {
+            console.error('❌ Widget not found after creation');
+            setWidgetError('Widget failed to mount');
+          }
+        }, 1000);
+        
+      } catch (error) {
+        console.error('❌ Error creating widget:', error);
+        setWidgetError(error instanceof Error ? error.message : 'Unknown error');
+      }
+    }
+    
+    // Check if script already exists and is loaded
+    const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed"]');
+    
+    if (existingScript && scriptLoadedRef.current) {
+      console.log('📝 Script already loaded, creating widget immediately...');
+      setTimeout(createWidget, 100);
+      return;
+    }
+    
+    if (existingScript && !scriptLoadedRef.current) {
+      console.log('📝 Script exists but not confirmed loaded, waiting for load event...');
+      existingScript.addEventListener('load', () => {
+        scriptLoadedRef.current = true;
+        setTimeout(createWidget, 500);
+      });
+      return;
+    }
+    
+    // Load new script
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+    script.async = true;
+    script.type = 'text/javascript';
+    
+    script.onload = () => {
+      console.log('✅ ElevenLabs ConvAI script loaded successfully');
+      scriptLoadedRef.current = true;
+      setTimeout(createWidget, 1000);
+    };
+    
+    script.onerror = (error) => {
+      console.error('❌ Failed to load ElevenLabs ConvAI script:', error);
+      setWidgetError('Failed to load ElevenLabs script');
+    };
+    
+    document.head.appendChild(script);
+    console.log('📦 New ElevenLabs script added to document head');
+    
+  }, []); // Empty dependency array to prevent re-running on hot reload
 
 
 
@@ -135,7 +248,7 @@ export default function InterviewInterface2() {
         
         <div className="mb-6">
           <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">
-            Your Name
+            Dein Name
           </label>
           <input
             type="text"
@@ -147,7 +260,44 @@ export default function InterviewInterface2() {
           />
         </div>
 
-
+        {/* ElevenLabs ConvAI Widget */}
+        <div className="mb-6 p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3">🎤 AI Voice Interview</h3>
+          <div className="min-h-[400px] bg-white border border-gray-300 rounded-lg overflow-hidden">
+            <div 
+              ref={widgetRef} 
+              className="w-full h-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600"
+            >
+              {!widgetLoaded && !widgetError && (
+                <div className="text-center">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
+                  <p className="font-semibold">Loading AI Voice Interview Widget...</p>
+                  <p className="text-sm text-gray-500 mt-1">Initializing ElevenLabs ConvAI</p>
+                </div>
+              )}
+              {widgetError && (
+                <div className="text-center text-red-600">
+                  <div className="text-4xl mb-2">⚠️</div>
+                  <p className="font-semibold">Widget Load Error</p>
+                  <p className="text-sm mt-1">{widgetError}</p>
+                  <button 
+                    onClick={() => window.location.reload()} 
+                    className="mt-2 px-4 py-1 bg-red-100 hover:bg-red-200 rounded text-sm"
+                  >
+                    Reload Page
+                  </button>
+                </div>
+              )}
+              {widgetLoaded && !widgetRef.current?.querySelector('elevenlabs-convai') && (
+                <div className="text-center text-green-600">
+                  <div className="text-4xl mb-2">✅</div>
+                  <p className="font-semibold">Widget Loaded Successfully!</p>
+                  <p className="text-sm">If you do not see the interface, try refreshing the page</p>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
 
         {/* N8n Form Button */}
         <div className="text-center">
@@ -162,7 +312,7 @@ export default function InterviewInterface2() {
                 Opening Form...
               </div>
             ) : (
-              'Open Interview Form'
+              'Lade Datei hoch'
             )}
           </button>
           

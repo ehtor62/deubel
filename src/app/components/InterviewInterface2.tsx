@@ -7,16 +7,25 @@ export default function InterviewInterface2() {
   const [isLoading, setIsLoading] = useState(false);
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
+  const [isClient, setIsClient] = useState(false);
+  const [audioNativeLoaded, setAudioNativeLoaded] = useState(false);
   const scriptLoadedRef = useRef(false);
 
-  // Load script once globally
+  // Ensure client-side hydration
   useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Load script once globally (client-side only)
+  useEffect(() => {
+    if (!isClient) return;
+    
     console.log('🔧 Loading ElevenLabs script globally...');
     
     const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed"]');
     if (existingScript) {
       scriptLoadedRef.current = true;
-      console.log('� Script already exists');
+      console.log('📝 Script already exists');
       return;
     }
     
@@ -37,10 +46,12 @@ export default function InterviewInterface2() {
     
     document.head.appendChild(script);
     console.log('📦 ElevenLabs script added to document head');
-  }, []);
+  }, [isClient]);
 
-  // Initialize widget with dangerouslySetInnerHTML approach
+  // Initialize widget with dangerouslySetInnerHTML approach (client-side only)
   useEffect(() => {
+    if (!isClient) return;
+    
     const timer = setTimeout(() => {
       console.log('🎤 Checking for widget readiness...');
       
@@ -49,7 +60,6 @@ export default function InterviewInterface2() {
         if (customElements.get('elevenlabs-convai')) {
           console.log('✅ Custom element is defined, setting up widget');
           setWidgetLoaded(true);
-
         } else {
           console.log('⏳ Custom element not ready, checking again...');
           setTimeout(checkCustomElement, 500);
@@ -60,7 +70,41 @@ export default function InterviewInterface2() {
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, []);
+  }, [isClient]);
+
+  // Load AudioNative script separately (client-side only)
+  useEffect(() => {
+    if (!isClient) return;
+    
+    console.log('🎵 Loading AudioNative script...');
+    
+    const existingAudioScript = document.querySelector('script[src="https://elevenlabs.io/player/audioNativeHelper.js"]');
+    if (existingAudioScript) {
+      console.log('📝 AudioNative script already exists');
+      setAudioNativeLoaded(true);
+      return;
+    }
+    
+    const audioScript = document.createElement('script');
+    audioScript.src = 'https://elevenlabs.io/player/audioNativeHelper.js';
+    audioScript.type = 'text/javascript';
+    audioScript.async = true;
+    
+    audioScript.onload = () => {
+      console.log('✅ AudioNative script loaded successfully');
+      // Wait a bit for the script to initialize
+      setTimeout(() => {
+        setAudioNativeLoaded(true);
+      }, 1000);
+    };
+    
+    audioScript.onerror = (error) => {
+      console.error('❌ Failed to load AudioNative script:', error);
+    };
+    
+    document.head.appendChild(audioScript);
+    console.log('📦 AudioNative script added to document head');
+  }, [isClient]);
 
 
 
@@ -205,10 +249,18 @@ export default function InterviewInterface2() {
 
         {/* ElevenLabs ConvAI Widget */}
         <div className="mb-6 p-4 border-2 border-blue-300 rounded-lg bg-blue-50">
-          <h3 className="text-lg font-semibold text-blue-800 mb-3">🎤 AI Voice Interview</h3>
-          <div className="min-h-[400px] bg-white border border-gray-300 rounded-lg overflow-hidden">
-            {!widgetLoaded && !widgetError && (
-              <div className="w-full h-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
+          <h3 className="text-lg font-semibold text-blue-800 mb-3">🎤 KI Telefon Interview</h3>
+          <div className="bg-white border border-gray-300 rounded-lg overflow-hidden">
+            {!isClient && (
+              <div className="w-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
+                <div className="text-center">
+                  <p className="font-semibold">Loading...</p>
+                </div>
+              </div>
+            )}
+            
+            {isClient && !widgetLoaded && !widgetError && (
+              <div className="w-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
                 <div className="text-center">
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-2"></div>
                   <p className="font-semibold">Loading AI Voice Interview Widget...</p>
@@ -217,8 +269,8 @@ export default function InterviewInterface2() {
               </div>
             )}
             
-            {widgetError && (
-              <div className="w-full h-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
+            {isClient && widgetError && (
+              <div className="w-full min-h-[350px] bg-gray-100 border border-dashed border-gray-400 rounded flex items-center justify-center text-gray-600">
                 <div className="text-center text-red-600">
                   <div className="text-4xl mb-2">⚠️</div>
                   <p className="font-semibold">Widget Load Error</p>
@@ -233,11 +285,11 @@ export default function InterviewInterface2() {
               </div>
             )}
             
-            {widgetLoaded && (
+            {isClient && widgetLoaded && (
               <div 
                 className="w-full h-full min-h-[350px]"
                 dangerouslySetInnerHTML={{
-                  __html: '<elevenlabs-convai agent-id="agent_6601k6t8307weyxbahv9p0qnyfr0" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>'
+                  __html: '<elevenlabs-convai agent-id="agent_5901kc1rt1baepa8dpq4v5x2v0q5" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>'
                 }}
               />
             )}
@@ -289,6 +341,8 @@ export default function InterviewInterface2() {
           This will open the interview form in a new tab. After you submit the form, that tab will automatically close. Make sure your browser allows pop-ups.
         </p>
       </div>
+
+      
     </div>
   );
 }

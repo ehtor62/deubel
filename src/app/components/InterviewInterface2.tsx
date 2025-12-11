@@ -8,7 +8,6 @@ export default function InterviewInterface2() {
   const [widgetLoaded, setWidgetLoaded] = useState(false);
   const [widgetError, setWidgetError] = useState<string | null>(null);
   const [isClient, setIsClient] = useState(false);
-  const [audioNativeLoaded, setAudioNativeLoaded] = useState(false);
   const scriptLoadedRef = useRef(false);
 
   // Ensure client-side hydration
@@ -70,40 +69,6 @@ export default function InterviewInterface2() {
     }, 2000);
     
     return () => clearTimeout(timer);
-  }, [isClient]);
-
-  // Load AudioNative script separately (client-side only)
-  useEffect(() => {
-    if (!isClient) return;
-    
-    console.log('🎵 Loading AudioNative script...');
-    
-    const existingAudioScript = document.querySelector('script[src="https://elevenlabs.io/player/audioNativeHelper.js"]');
-    if (existingAudioScript) {
-      console.log('📝 AudioNative script already exists');
-      setAudioNativeLoaded(true);
-      return;
-    }
-    
-    const audioScript = document.createElement('script');
-    audioScript.src = 'https://elevenlabs.io/player/audioNativeHelper.js';
-    audioScript.type = 'text/javascript';
-    audioScript.async = true;
-    
-    audioScript.onload = () => {
-      console.log('✅ AudioNative script loaded successfully');
-      // Wait a bit for the script to initialize
-      setTimeout(() => {
-        setAudioNativeLoaded(true);
-      }, 1000);
-    };
-    
-    audioScript.onerror = (error) => {
-      console.error('❌ Failed to load AudioNative script:', error);
-    };
-    
-    document.head.appendChild(audioScript);
-    console.log('📦 AudioNative script added to document head');
   }, [isClient]);
 
 

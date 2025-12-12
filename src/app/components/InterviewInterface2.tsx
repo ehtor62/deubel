@@ -21,7 +21,7 @@ export default function InterviewInterface2() {
     
     console.log('🔧 Loading ElevenLabs script globally...');
     
-    const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed"]');
+    const existingScript = document.querySelector('script[src="https://unpkg.com/@elevenlabs/convai-widget-embed@beta"]');
     if (existingScript) {
       scriptLoadedRef.current = true;
       console.log('📝 Script already exists');
@@ -29,7 +29,7 @@ export default function InterviewInterface2() {
     }
     
     const script = document.createElement('script');
-    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed';
+    script.src = 'https://unpkg.com/@elevenlabs/convai-widget-embed@beta';
     script.async = true;
     script.type = 'text/javascript';
     
@@ -70,6 +70,65 @@ export default function InterviewInterface2() {
     
     return () => clearTimeout(timer);
   }, [isClient]);
+
+ // Hide "Powered by Elevenlabs" branding after widget loads
+  useEffect(() => {
+    if (!isClient || !widgetLoaded) return;
+    
+    const hideBranding = () => {
+      // Try multiple selectors to find and hide the branding
+      const selectors = [
+        'a[href*="elevenlabs"]',
+        '[class*="powered"]',
+        '[class*="branding"]',
+        '[data-testid*="powered"]',
+        'div:has(> a[href*="elevenlabs"])',
+        '.powered-by',
+        'p:contains("Powered by")',
+      ];
+      
+      selectors.forEach(selector => {
+        try {
+          const elements = document.querySelectorAll(selector);
+          elements.forEach(el => {
+            const text = el.textContent?.toLowerCase() || '';
+            if (text.includes('powered') || text.includes('elevenlabs')) {
+              (el as HTMLElement).style.display = 'none';
+              console.log('🔇 Hidden branding element:', el);
+            }
+          });
+        } catch {
+          // Selector might not be valid
+        }
+      });
+
+      // Also check inside the custom element's shadow DOM if accessible
+      const widget = document.querySelector('elevenlabs-convai');
+      if (widget && 'shadowRoot' in widget && widget.shadowRoot) {
+        const shadowElements = widget.shadowRoot.querySelectorAll('*');
+        shadowElements.forEach((el: Element) => {
+          const text = el.textContent?.toLowerCase() || '';
+          if (text.includes('powered by elevenlabs') || text.includes('powered by')) {
+            (el as HTMLElement).style.display = 'none';
+            console.log('🔇 Hidden shadow DOM branding:', el);
+          }
+        });
+      }
+    };
+
+// Run multiple times to catch dynamically loaded content
+    const intervals = [500, 1000, 2000, 3000];
+    intervals.forEach(delay => {
+      setTimeout(hideBranding, delay);
+    });
+
+    // Also run on interval
+    const interval = setInterval(hideBranding, 2000);
+    
+    return () => clearInterval(interval);
+  }, [isClient, widgetLoaded]);
+
+ 
 
 
 
@@ -254,7 +313,32 @@ export default function InterviewInterface2() {
               <div 
                 className="w-full h-full min-h-[350px]"
                 dangerouslySetInnerHTML={{
-                  __html: '<elevenlabs-convai agent-id="agent_5901kc1rt1baepa8dpq4v5x2v0q5" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>'
+                  __html: `
+                    <style>
+                      /* Hide all possible branding elements globally */
+                      a[href*="elevenlabs"],
+                      [class*="powered"],
+                      [class*="branding"],
+                      [data-testid*="powered"],
+                      .powered-by {
+                        display: none !important;
+                        visibility: hidden !important;
+                        opacity: 0 !important;
+                        height: 0 !important;
+                        width: 0 !important;
+                        position: absolute !important;
+                        left: -9999px !important;
+                      }
+                      
+                      /* Target shadow DOM parts */
+                      elevenlabs-convai::part(powered-by),
+                      elevenlabs-convai::part(branding),
+                      elevenlabs-convai::part(footer) {
+                        display: none !important;
+                      }
+                    </style>
+                    <elevenlabs-convai agent-id="agent_5901kc1rt1baepa8dpq4v5x2v0q5" style="width: 100%; height: 100%; display: block; min-height: 350px; border: none; border-radius: 8px;"></elevenlabs-convai>
+                  `
                 }}
               />
             )}
